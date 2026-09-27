@@ -7,6 +7,7 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
   const canvasRef = useRef(null);
   const wsRef = useRef(null);
   const animFrameRef = useRef(null);
+  const cvAnimFrameRef = useRef(null);
   const cameraInstanceRef = useRef(null);
   const poseInstanceRef = useRef(null);
   const squatBottomRef = useRef(false);
@@ -32,6 +33,16 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
     balance: true,
     mirror: true
   });
+
+  const vizTogglesRef = useRef(vizToggles);
+  useEffect(() => {
+    vizTogglesRef.current = vizToggles;
+  }, [vizToggles]);
+
+  const activeModeRef = useRef(activeMode);
+  useEffect(() => {
+    activeModeRef.current = activeMode;
+  }, [activeMode]);
 
   // Telemetry
   const [currentTelemetry, setCurrentTelemetry] = useState({
@@ -169,7 +180,10 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         audio: false
       });
 
-      if (!videoRef.current) return;
+      if (!videoRef.current) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
+      }
       videoRef.current.srcObject = stream;
       try {
         await videoRef.current.play();
@@ -182,27 +196,21 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
 
       // 2. Initialize MediaPipe Pose from window or package
       let PoseClass = window.Pose;
-      let CameraClass = window.Camera;
-
       if (!PoseClass) {
         const mpPose = await import('@mediapipe/pose');
         PoseClass = mpPose.Pose;
       }
-      if (!CameraClass) {
-        const mpCam = await import('@mediapipe/camera_utils');
-        CameraClass = mpCam.Camera;
-      }
 
       const pose = new PoseClass({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+        locateFile: (file) => `/mediapipe/pose/${file}`
       });
 
       pose.setOptions({
-        modelComplexity: 1,
+        modelComplexity: 0,
         smoothLandmarks: true,
         enableSegmentation: false,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
+        minDetectionConfidence: 0.35,
+        minTrackingConfidence: 0.35
       });
 
       pose.onResults((results) => {
@@ -237,22 +245,35 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         const lm = results.poseLandmarks;
 
         // Mirror coordinates for natural mirror view
-        const getPoint = (idx) => ({
-          x: (1.0 - lm[idx].x) * w,
-          y: lm[idx].y * h,
-          vis: lm[idx].visibility || 0.9
-        });
+        const getPoint = (idx) => {
+          if (!lm[idx]) return { x: w / 2, y: h / 2, vis: 0 };
+          return {
+            x: (1.0 - lm[idx].x) * w,
+            y: lm[idx].y * h,
+            vis: lm[idx].visibility ?? 0.8
+          };
+        };
 
         const nose = getPoint(0);
         const lEar = getPoint(7);
         const rEar = getPoint(8);
         const lSh = getPoint(11);
         const rSh = getPoint(12);
-        const lHip = getPoint(23);
-        const rHip = getPoint(24);
 
         const midSh = { x: (lSh.x + rSh.x) / 2, y: (lSh.y + rSh.y) / 2 };
-        const midHip = { x: (lHip.x + rHip.x) / 2, y: (lHip.y + rHip.y) / 2 };
+        const midHip = {
+          x: (1.0 - analysis.keypoints.midHip.x) * w,
+          y: analysis.keypoints.midHip.y * h
+        };
+        const lHip = (lm[23] && (lm[23].visibility ?? 0) > 0.25)
+          ? getPoint(23)
+          : { x: midHip.x - 22, y: midHip.y, vis: 0.4 };
+        const rHip = (lm[24] && (lm[24].visibility ?? 0) > 0.25)
+          ? getPoint(24)
+          : { x: midHip.x + 22, y: midHip.y, vis: 0.4 };
+
+        const currentMode = activeModeRef.current;
+        const toggles = vizTogglesRef.current;
 
         // Posture-Sense biomechanics updates
         if (analysis.symmetryPct) setSymmetryScore(analysis.symmetryPct);
@@ -260,7 +281,7 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         if (analysis.centerOfMass) setComCoords(analysis.centerOfMass);
 
         // Squat analysis if activeMode === 'squat'
-        if (activeMode === 'squat') {
+        if (currentMode === 'squat') {
           const sq = analyzeSquatLandmarks(results.poseLandmarks);
           if (sq) {
             setSquatPhase(sq.phase);
@@ -286,7 +307,7 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         }
 
         // 1. Draw Skeleton & Joints if enabled
-        if (vizToggles.skeleton) {
+        if (toggles.skeleton) {
           ctx.lineWidth = 3;
           ctx.strokeStyle = strokeColor;
           ctx.shadowColor = glowColor;
@@ -324,10 +345,12 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
             { pt: lEar, r: 4.5, col: '#94A3B8' },
             { pt: rEar, r: 4.5, col: '#94A3B8' },
             { pt: lSh, r: 7.5, col: strokeColor },
-            { pt: rSh, r: 7.5, col: strokeColor },
-            { pt: lHip, r: 6.5, col: '#10B981' },
-            { pt: rHip, r: 6.5, col: '#10B981' }
+            { pt: rSh, r: 7.5, col: strokeColor }
           ];
+          if (lHip && rHip && (lHip.vis > 0.2 || rHip.vis > 0.2)) {
+            nodes.push({ pt: lHip, r: 6.5, col: '#10B981' });
+            nodes.push({ pt: rHip, r: 6.5, col: '#10B981' });
+          }
 
           nodes.forEach(({ pt, r, col }) => {
             ctx.beginPath();
@@ -343,8 +366,8 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         }
 
         // 2. Draw Center of Mass (CoM) Target Reticle if enabled (Posture-Sense)
-        if (vizToggles.com && analysis.centerOfMass) {
-          const cx = analysis.centerOfMass.x * canvas.width;
+        if (toggles.com && analysis.centerOfMass) {
+          const cx = (1.0 - analysis.centerOfMass.x) * canvas.width;
           const cy = analysis.centerOfMass.y * canvas.height;
           ctx.beginPath();
           ctx.arc(cx, cy, 10, 0, Math.PI * 2);
@@ -365,7 +388,7 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         }
 
         // 3. Draw Joint Angle Degree Badges if enabled
-        if (vizToggles.angles) {
+        if (toggles.angles) {
           ctx.font = 'bold 12px monospace';
           ctx.fillStyle = strokeColor;
           ctx.shadowBlur = 6;
@@ -401,19 +424,25 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
       poseInstanceRef.current = pose;
       setModelState('READY');
 
-      // 3. Connect CameraUtils frame feed
-      const camera = new CameraClass(videoRef.current, {
-        onFrame: async () => {
-          if (videoRef.current && videoRef.current.readyState >= 2 && poseInstanceRef.current) {
-            await poseInstanceRef.current.send({ image: videoRef.current });
+      // 3. High-performance requestAnimationFrame frame loop
+      let isSendingFrame = false;
+      const processFrame = async () => {
+        if (!poseInstanceRef.current) return;
+        const video = videoRef.current;
+        if (video && video.readyState >= 2 && !video.paused && !isSendingFrame) {
+          isSendingFrame = true;
+          try {
+            await poseInstanceRef.current.send({ image: video });
+          } catch (e) {
+            // Gracefully ignore frame drop
+          } finally {
+            isSendingFrame = false;
           }
-        },
-        width: 640,
-        height: 480
-      });
+        }
+        cvAnimFrameRef.current = requestAnimationFrame(processFrame);
+      };
 
-      await camera.start();
-      cameraInstanceRef.current = camera;
+      cvAnimFrameRef.current = requestAnimationFrame(processFrame);
 
     } catch (err) {
       console.warn('Real camera error:', err);
@@ -426,16 +455,22 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
     }
   }, [demoMode]);
 
-  // 3. Deterministic Demo Generator (ONLY when demoMode is active or explicit)
+  // 3. Deterministic Demo Generator or Real Webcam start
   useEffect(() => {
     if (!demoMode && cameraState !== 'DENIED') {
       startRealWebcamCV();
       return () => {
-        if (cameraInstanceRef.current) {
-          try { cameraInstanceRef.current.stop(); } catch (e) {}
+        if (cvAnimFrameRef.current) {
+          cancelAnimationFrame(cvAnimFrameRef.current);
+          cvAnimFrameRef.current = null;
         }
         if (videoRef.current && videoRef.current.srcObject) {
           videoRef.current.srcObject.getTracks().forEach(t => t.stop());
+          videoRef.current.srcObject = null;
+        }
+        if (poseInstanceRef.current) {
+          try { poseInstanceRef.current.close(); } catch (e) {}
+          poseInstanceRef.current = null;
         }
       };
     }

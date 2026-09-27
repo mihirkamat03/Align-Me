@@ -45,7 +45,7 @@ export function calculateVerticalAngle(pFrom, pTo) {
  * - 23: Left Hip, 24: Right Hip
  */
 export function analyzePoseLandmarks(landmarks) {
-  if (!landmarks || landmarks.length < 25) {
+  if (!landmarks || landmarks.length < 13) {
     return null;
   }
 
@@ -54,8 +54,12 @@ export function analyzePoseLandmarks(landmarks) {
   const rightEar = landmarks[8];
   const leftShoulder = landmarks[11];
   const rightShoulder = landmarks[12];
-  const leftHip = landmarks[23];
-  const rightHip = landmarks[24];
+  const leftHip = landmarks.length > 23 ? landmarks[23] : null;
+  const rightHip = landmarks.length > 24 ? landmarks[24] : null;
+
+  if (!leftShoulder || !rightShoulder) {
+    return null;
+  }
 
   // 1. Calculate Midpoints
   const midShoulder = {
@@ -63,14 +67,27 @@ export function analyzePoseLandmarks(landmarks) {
     y: (leftShoulder.y + rightShoulder.y) / 2.0
   };
 
-  const midHip = {
-    x: (leftHip.x + rightHip.x) / 2.0,
-    y: (leftHip.y + rightHip.y) / 2.0
-  };
+  const shoulderWidth = Math.hypot(rightShoulder.x - leftShoulder.x, rightShoulder.y - leftShoulder.y);
+  const hipsVisible = (leftHip && (leftHip.visibility ?? 1) > 0.3) || (rightHip && (rightHip.visibility ?? 1) > 0.3);
+
+  let midHip;
+  if (hipsVisible && leftHip && rightHip) {
+    midHip = {
+      x: (leftHip.x + rightHip.x) / 2.0,
+      y: (leftHip.y + rightHip.y) / 2.0
+    };
+  } else {
+    // Desk webcam close-up fallback: estimate hip position directly beneath midShoulder
+    const estimatedTorsoLength = Math.max(0.28, shoulderWidth * 1.5);
+    midHip = {
+      x: midShoulder.x,
+      y: Math.min(1.1, midShoulder.y + estimatedTorsoLength)
+    };
+  }
 
   const headRef = {
-    x: nose ? nose.x : (leftEar.x + rightEar.x) / 2.0,
-    y: nose ? nose.y : (leftEar.y + rightEar.y) / 2.0
+    x: nose ? nose.x : (leftEar && rightEar ? (leftEar.x + rightEar.x) / 2.0 : midShoulder.x),
+    y: nose ? nose.y : (leftEar && rightEar ? (leftEar.y + rightEar.y) / 2.0 : midShoulder.y - 0.2)
   };
 
   // 2. Compute Geometric Angles
@@ -103,13 +120,16 @@ export function analyzePoseLandmarks(landmarks) {
   const visibilities = [
     leftShoulder.visibility || 0.9,
     rightShoulder.visibility || 0.9,
-    leftHip.visibility || 0.8,
-    rightHip.visibility || 0.8,
     nose ? (nose.visibility || 0.9) : 0.8
   ];
+  if (leftHip && leftHip.visibility != null) visibilities.push(leftHip.visibility);
+  if (rightHip && rightHip.visibility != null) visibilities.push(rightHip.visibility);
+
+  const meanConf = visibilities.reduce((a, b) => a + b, 0) / (visibilities.length || 1);
+
   // Bilateral symmetry calculation
   const dyShoulder = Math.abs(leftShoulder.y - rightShoulder.y);
-  const dyHip = Math.abs(leftHip.y - rightHip.y);
+  const dyHip = (leftHip && rightHip) ? Math.abs(leftHip.y - rightHip.y) : 0;
   const symmetryPct = Math.max(60, Math.min(100, Math.round(100 - (dyShoulder * 250 + dyHip * 150))));
 
   // Center of mass calculation
