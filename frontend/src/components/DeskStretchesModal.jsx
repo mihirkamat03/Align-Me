@@ -75,49 +75,50 @@ export default function DeskStretchesModal({ isOpen, onClose, onComplete }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-mono text-xs">
-      <div className="w-full max-w-2xl rounded-3xl bg-[#090D14] border border-emerald-500/30 cockpit-surface shadow-2xl p-6 sm:p-8 flex flex-col gap-6 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in font-sans text-xs">
+      <div className="w-full max-w-2xl rounded-3xl card-3d shadow-2xl p-6 sm:p-8 flex flex-col gap-6 relative bg-white">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+        <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            <div className="p-2.5 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200/80 shadow-xs">
               <HeartPulse className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-display text-white uppercase tracking-tight">
+              <h2 className="text-xl font-display font-bold text-slate-900 tracking-tight">
                 Desk Decompression & Recovery
               </h2>
-              <span className="text-[11px] text-zinc-400">
+              <span className="text-xs text-slate-500 font-medium">
                 Targeted micro-stretches to neutralize cumulative sitting fatigue
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
+            aria-label="Close modal"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Stretch Tabs */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-3">
           {STRETCHES.map((s, idx) => (
             <button
               key={s.id}
               onClick={() => selectExercise(idx)}
-              className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+              className={`p-3.5 rounded-2xl border text-left transition-all flex flex-col justify-between ${
                 selectedStretch === idx
-                  ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
-                  : 'bg-zinc-900/60 border-white/[0.04] text-zinc-400 hover:border-white/10'
+                  ? 'bg-rose-50/90 border-rose-300 text-rose-700 shadow-sm'
+                  : 'bg-slate-50 border-slate-200/80 text-slate-600 hover:bg-slate-100/80'
               }`}
             >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] uppercase font-bold text-zinc-500">Ex 0{idx + 1}</span>
-                {completed[idx] && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Ex 0{idx + 1}</span>
+                {completed[idx] && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
               </div>
-              <span className="text-xs font-bold text-white leading-snug line-clamp-1">
+              <span className="text-xs font-bold text-slate-900 leading-snug line-clamp-1">
                 {s.title.split('(')[0]}
               </span>
             </button>
@@ -125,22 +126,22 @@ export default function DeskStretchesModal({ isOpen, onClose, onComplete }) {
         </div>
 
         {/* Active Exercise Display */}
-        <div className="p-6 rounded-2xl bg-zinc-900/60 border border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="p-6 rounded-2xl card-3d-inset flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex-1 space-y-3">
             <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase">
+              <span className="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-bold uppercase">
                 {current.target}
               </span>
             </div>
-            <h3 className="text-lg font-display text-white">{current.title}</h3>
-            <p className="text-xs text-zinc-400 leading-relaxed font-sans">
+            <h3 className="text-lg font-display font-bold text-slate-900">{current.title}</h3>
+            <p className="text-xs text-slate-600 leading-relaxed font-sans">
               {current.benefit}
             </p>
 
-            <div className="pt-2 space-y-1.5 font-sans text-xs text-zinc-300">
+            <div className="pt-2 space-y-1.5 font-sans text-xs text-slate-700">
               {current.cues.map((c, i) => (
                 <div key={i} className="flex items-start gap-2">
-                  <span className="text-emerald-400 font-mono font-bold">{i + 1}.</span>
+                  <span className="text-rose-600 font-bold">{i + 1}.</span>
                   <span>{c}</span>
                 </div>
               ))}
@@ -148,25 +149,27 @@ export default function DeskStretchesModal({ isOpen, onClose, onComplete }) {
           </div>
 
           {/* Countdown Dial */}
-          <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-black/50 border border-white/10 shrink-0 w-44">
-            <span className="text-5xl font-mono font-bold text-white tracking-tight">
+          <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm shrink-0 w-44">
+            <span className="text-5xl font-display font-extrabold text-slate-900 tracking-tight">
               {secondsRemaining}s
             </span>
-            <span className="text-[10px] text-zinc-500 uppercase mt-1">Countdown</span>
+            <span className="text-[10px] text-slate-400 uppercase font-semibold mt-1">Timer</span>
 
             <div className="flex items-center gap-2 mt-4">
               <button
                 onClick={() => setIsActive(!isActive)}
-                className="p-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold transition-all shadow-md"
+                className="p-3 rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:from-orange-600 hover:to-rose-600 text-white font-bold transition-all shadow-md shadow-rose-500/25"
+                title={isActive ? 'Pause' : 'Start'}
               >
-                {isActive ? <Pause className="w-4 h-4 fill-zinc-950" /> : <Play className="w-4 h-4 fill-zinc-950" />}
+                {isActive ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
               </button>
               <button
                 onClick={() => {
                   setIsActive(false);
                   setSecondsRemaining(current.duration);
                 }}
-                className="p-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-all"
+                className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all border border-slate-200"
+                title="Reset timer"
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
@@ -175,8 +178,8 @@ export default function DeskStretchesModal({ isOpen, onClose, onComplete }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
-          <span className="text-[11px] text-zinc-500">
+        <div className="flex items-center justify-between pt-2 border-t border-slate-200/80">
+          <span className="text-xs text-slate-500 font-medium">
             {completed.filter(Boolean).length} of 3 exercises finished
           </span>
           <button
@@ -184,7 +187,7 @@ export default function DeskStretchesModal({ isOpen, onClose, onComplete }) {
               if (onComplete) onComplete();
               onClose();
             }}
-            className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold transition-all uppercase tracking-wider text-xs"
+            className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-sans font-semibold transition-all text-xs tracking-wide shadow-sm"
           >
             Finish Micro-break
           </button>

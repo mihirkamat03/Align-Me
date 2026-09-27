@@ -55,81 +55,82 @@ export default function VideoUploadModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-mono text-xs">
-      <div className="w-full max-w-lg rounded-3xl bg-[#090D14] border border-white/10 cockpit-surface shadow-2xl p-6 sm:p-8 flex flex-col gap-6 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in font-sans text-xs">
+      <div className="w-full max-w-lg rounded-3xl card-3d shadow-2xl p-6 sm:p-8 flex flex-col gap-6 relative bg-white">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+        <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            <div className="p-2.5 rounded-2xl bg-orange-50 text-orange-600 border border-orange-200/80 shadow-xs">
               <Film className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-display text-white uppercase tracking-tight">
+              <h2 className="text-xl font-display font-bold text-slate-900 tracking-tight">
                 Upload Workblock Footage
               </h2>
-              <span className="text-[11px] text-zinc-400">
-                Run offline frame sampling & ISO posture rule engine on video
+              <span className="text-xs text-slate-500 font-medium">
+                Offline optical frame sampling & ISO posture rule engine
               </span>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white transition-all"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all"
+            aria-label="Close modal"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-500/30 text-rose-300 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+            <span className="font-medium">{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* File input / dropzone */}
-          <div className="p-6 rounded-2xl border-2 border-dashed border-white/10 hover:border-cyan-500/40 bg-zinc-900/40 text-center transition-all cursor-pointer relative">
+          <div className="p-8 rounded-2xl border-2 border-dashed border-slate-200 hover:border-rose-400 bg-slate-50/70 hover:bg-rose-50/20 text-center transition-all cursor-pointer relative card-3d-inset">
             <input
               type="file"
               accept="video/mp4,video/webm,video/quicktime,video/avi"
               onChange={handleFileChange}
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
             />
-            <UploadCloud className="w-8 h-8 text-zinc-400 mx-auto mb-2" />
+            <UploadCloud className="w-9 h-9 text-rose-500 mx-auto mb-2" />
             {file ? (
               <div>
-                <span className="text-white font-bold block">{file.name}</span>
-                <span className="text-zinc-500 text-[11px] block mt-1">
-                  {(file.size / (1024 * 1024)).toFixed(1)} MB • Click to replace
+                <span className="text-slate-900 font-bold block text-sm">{file.name}</span>
+                <span className="text-slate-500 text-xs block mt-1">
+                  {(file.size / (1024 * 1024)).toFixed(1)} MB • Click to change file
                 </span>
               </div>
             ) : (
               <div>
-                <span className="text-zinc-300 block font-bold">Select or drag & drop posture video</span>
-                <span className="text-zinc-500 text-[11px] block mt-1">Supports MP4, WebM, MOV, AVI</span>
+                <span className="text-slate-800 block font-bold text-sm">Select or drag & drop posture video</span>
+                <span className="text-slate-500 text-xs block mt-1">Supports MP4, WebM, MOV, AVI</span>
               </div>
             )}
           </div>
 
           <div>
-            <label className="text-zinc-400 block mb-1 text-[11px] uppercase">Session Title</label>
+            <label className="text-slate-600 block mb-1.5 text-xs font-semibold">Session Title</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Afternoon Coding Sprint"
-              className="w-full p-3 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-cyan-500"
+              className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-800 focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-400/20 card-3d-inset font-sans text-xs"
             />
           </div>
 
           <div>
-            <label className="text-zinc-400 block mb-1 text-[11px] uppercase">Workstation Setup</label>
+            <label className="text-slate-600 block mb-1.5 text-xs font-semibold">Workstation Setup</label>
             <select
               value={environment}
               onChange={(e) => setEnvironment(e.target.value)}
-              className="w-full p-3 rounded-xl bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-cyan-500"
+              className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-slate-800 focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-400/20 card-3d-inset font-sans text-xs"
             >
               <option value="Office Desk">Office Standard Desk</option>
               <option value="Standing Desk">Standing Desk</option>
@@ -140,16 +141,16 @@ export default function VideoUploadModal({ isOpen, onClose }) {
 
           {uploading && (
             <div className="space-y-2 pt-2">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-zinc-400 flex items-center gap-2">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+              <div className="flex justify-between text-xs font-medium">
+                <span className="text-slate-600 flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
                   Sampling frames & evaluating posture rules...
                 </span>
-                <span className="text-cyan-400 font-bold">{progress}%</span>
+                <span className="text-rose-600 font-bold">{progress}%</span>
               </div>
-              <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
                 <div
-                  className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 transition-all duration-300"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -161,14 +162,14 @@ export default function VideoUploadModal({ isOpen, onClose }) {
               type="button"
               onClick={onClose}
               disabled={uploading}
-              className="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-all uppercase"
+              className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-sans font-semibold transition-all text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!file || uploading}
-              className="px-6 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-zinc-950 font-bold uppercase transition-all shadow-md flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:from-orange-600 hover:to-rose-600 disabled:opacity-40 text-white font-sans font-semibold transition-all shadow-md shadow-rose-500/25 flex items-center gap-2 text-xs"
             >
               {uploading ? (
                 <>

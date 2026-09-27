@@ -15,6 +15,15 @@
     letter-spacing: -0.012em;
   }
 
+  button, [role="button"], a {
+    cursor: pointer;
+  }
+
+  button:active:not(:disabled), [role="button"]:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
   /* Custom precision scrollbars */
   ::-webkit-scrollbar {
     width: 6px;
