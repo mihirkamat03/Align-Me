@@ -7,7 +7,7 @@ import { Clock, Square, Activity, Sparkles, CheckCircle2, ShieldAlert } from 'lu
 
 export default function LiveSessionPage() {
   const navigate = useNavigate();
-  const { demoMode, showToast } = useApp();
+  const { demoMode, toggleDemoMode, showToast } = useApp();
 
   const [sessionId, setSessionId] = useState(`sess-${Date.now().toString(36)}`);
   const [sessionStartTime] = useState(Date.now());
@@ -93,7 +93,20 @@ export default function LiveSessionPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <button
+              onClick={toggleDemoMode}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-sans font-semibold flex items-center gap-1.5 transition-all shadow-xs ${
+                demoMode
+                  ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800'
+                  : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+              }`}
+              title="Toggle between real optical camera CV and simulated posture feed"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-rose-500" />
+              <span>{demoMode ? 'Simulation Feed' : 'Live Camera'}</span>
+            </button>
+
             <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl card-3d-inset text-xs font-sans text-slate-800 font-bold">
               <Clock className="w-4 h-4 text-rose-500" />
               <span>{formatTimer(elapsedSeconds)}</span>
@@ -114,6 +127,7 @@ export default function LiveSessionPage() {
         <LiveWebcamCV
           sessionId={sessionId}
           demoMode={demoMode}
+          onToggleDemo={toggleDemoMode}
           onMetricsUpdate={(p) => {
             setCurrentMetrics({
               headAngle: p.head_angle,

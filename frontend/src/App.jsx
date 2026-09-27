@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -35,11 +35,14 @@ export default function App() {
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/calibration" element={<CalibrationPage />} />
               <Route path="/session" element={<LiveSessionPage />} />
+              <Route path="/sessions" element={<HistoryPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/session/:id" element={<SessionDetailPage />} />
+              <Route path="/sessions/:id" element={<SessionDetailPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
           <Footer />

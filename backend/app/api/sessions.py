@@ -8,7 +8,7 @@ from app.models import Session, PostureEpisode, PostureMetric, User
 from app.schemas import SessionSummary, SessionDetail, MetricPoint, EpisodeItem
 from app.analysis.scoring import calculate_composite_score
 
-router = APIRouter(prefix="/api/sessions", tags=["Sessions"])
+router = APIRouter(tags=["Sessions"])
 
 @router.get("", response_model=List[SessionSummary])
 def list_sessions(db: DBSession = Depends(get_db)):

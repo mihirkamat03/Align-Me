@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Camera as CameraIcon, CameraOff, AlertCircle, RefreshCw, ShieldCheck, Activity, Eye, AlertTriangle, CheckCircle2, Play, Sliders, Layers, Compass, Dumbbell, UserCheck } from 'lucide-react';
+import { Camera as CameraIcon, CameraOff, AlertCircle, RefreshCw, ShieldCheck, Activity, Eye, AlertTriangle, CheckCircle2, Play, Sliders, Layers, Compass, Dumbbell, UserCheck, HeartPulse } from 'lucide-react';
 import { analyzePoseLandmarks, analyzeSquatLandmarks } from '../utils/postureGeometry';
 
 export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = false, onToggleDemo }) {
@@ -506,9 +506,9 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
   return (
     <div className="flex flex-col gap-5 w-full">
       
-      {/* EXERCISE / POSTURE MODE SELECTOR & VISUALIZATION TOGGLES (POSTUREGUARD & POSTURE-SENSE INSPIRATION) */}
-      <div className="flex flex-wrap items-center justify-between gap-4 font-mono text-xs">
-        <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-zinc-900/80 border border-white/[0.08] backdrop-blur-md">
+      {/* EXERCISE / POSTURE MODE SELECTOR & VISUALIZATION TOGGLES */}
+      <div className="flex flex-wrap items-center justify-between gap-4 font-sans text-xs">
+        <div className="flex items-center gap-1.5 p-1.5 rounded-2xl card-3d">
           {[
             { id: 'sitting', label: 'DESK ERGONOMICS', icon: Compass },
             { id: 'squat', label: 'SQUAT FORM', icon: Dumbbell },
@@ -519,10 +519,10 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
               <button
                 key={mode.id}
                 onClick={() => setActiveMode(mode.id)}
-                className={`px-3.5 py-1.5 rounded-xl transition-all font-bold flex items-center gap-2 ${
+                className={`px-3.5 py-1.5 rounded-xl transition-all font-semibold flex items-center gap-2 ${
                   activeMode === mode.id
-                    ? 'bg-emerald-500 text-zinc-950 shadow-md'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -532,9 +532,9 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
           })}
         </div>
 
-        {/* VISUALIZATION TOGGLES (POSTURE-SENSE PLAYGROUND INSPIRATION) */}
-        <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-zinc-900/80 border border-white/[0.08] text-[11px]">
-          <span className="text-zinc-500 px-2 text-[10px] uppercase font-bold hidden sm:block">HUD Toggles:</span>
+        {/* VISUALIZATION TOGGLES */}
+        <div className="flex items-center gap-1.5 p-1.5 rounded-2xl card-3d text-[11px]">
+          <span className="text-slate-400 px-2 text-[10px] uppercase font-bold hidden sm:block">HUD Toggles:</span>
           {[
             { key: 'skeleton', label: 'Skeleton' },
             { key: 'angles', label: 'Angles' },
@@ -544,10 +544,10 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
             <button
               key={tog.key}
               onClick={() => setVizToggles(prev => ({ ...prev, [tog.key]: !prev[tog.key] }))}
-              className={`px-3 py-1.5 rounded-xl transition-all font-bold ${
+              className={`px-3 py-1.5 rounded-xl transition-all font-semibold ${
                 vizToggles[tog.key]
-                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-rose-50 text-rose-600 border border-rose-200/80 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
               }`}
             >
               {tog.label}
@@ -557,7 +557,7 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
       </div>
 
       {/* DOMINANT CAMERA VIEWPORT */}
-      <div className="relative w-full h-[520px] sm:h-[620px] rounded-3xl overflow-hidden border border-white/[0.08] bg-[#070A0E] shadow-2xl flex flex-col items-center justify-center cockpit-surface tech-bracket-tl tech-bracket-br">
+      <div className="relative w-full h-[520px] sm:h-[620px] rounded-3xl overflow-hidden card-3d bg-slate-950 flex flex-col items-center justify-center shadow-2xl">
         
         {/* Real HTML Video element */}
         <video
@@ -570,31 +570,77 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
           }`}
         />
 
-        {/* Backdrop for Demo Mode or Camera Denied */}
+        {/* Backdrop for Demo Mode, Camera Standby, or Denied */}
         {(demoMode || cameraState !== 'ACTIVE') && (
-          <div className="absolute inset-0 bg-[#070A0E] flex flex-col items-center justify-center">
-            <div className="absolute inset-0 bg-tech-grid opacity-35" />
+          <div className="absolute inset-0 bg-[#070A0E] flex flex-col items-center justify-center p-6">
+            <div className="absolute inset-0 bg-tech-grid opacity-25" />
             
-            {cameraState === 'DENIED' && (
-              <div className="max-w-md p-8 rounded-2xl bg-zinc-900/90 border border-zinc-700 text-center flex flex-col items-center z-30">
-                <CameraOff className="w-12 h-12 text-amber-400 mb-4" />
-                <h3 className="text-xl font-display text-white mb-2 uppercase">CAMERA ACCESS DENIED</h3>
-                <p className="text-xs text-zinc-400 font-sans mb-6 leading-relaxed">
-                  Webcam access is required for real-time edge pose analysis. Enable camera permissions in your browser or explore the system in Demo Mode.
+            {/* Standby / Error Card */}
+            {(cameraState === 'ERROR' || cameraState === 'IDLE') && !demoMode && (
+              <div className="max-w-md w-full p-8 rounded-3xl bg-white/95 border border-slate-200 text-center flex flex-col items-center z-30 shadow-2xl backdrop-blur-md">
+                <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500 mb-4 shadow-xs">
+                  <CameraIcon className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-display font-bold text-slate-900 mb-2">
+                  Optical Pose Camera Standby
+                </h3>
+                <p className="text-xs text-slate-600 font-sans mb-6 leading-relaxed">
+                  Webcam access enables edge-processed joint trigonometry. Click below to connect your camera or launch the simulated posture analytics feed immediately.
                 </p>
-                <button
-                  onClick={onToggleDemo}
-                  className="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-md"
-                >
-                  <Play className="w-4 h-4" />
-                  <span>Launch Demo Data Mode</span>
-                </button>
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                  <button
+                    onClick={startRealWebcamCV}
+                    className="w-full py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-sans font-semibold text-xs transition-all shadow-xs flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Connect Webcam</span>
+                  </button>
+                  <button
+                    onClick={onToggleDemo}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:from-orange-600 hover:to-rose-600 text-white font-sans font-semibold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>Launch Simulation</span>
+                  </button>
+                </div>
               </div>
             )}
 
-            {cameraState === 'INITIALIZING' && (
-              <div className="flex flex-col items-center z-30 text-xs font-mono text-zinc-400">
-                <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin mb-3" />
+            {/* Denied Card */}
+            {cameraState === 'DENIED' && !demoMode && (
+              <div className="max-w-md w-full p-8 rounded-3xl bg-white/95 border border-slate-200 text-center flex flex-col items-center z-30 shadow-2xl backdrop-blur-md">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500 mb-4 shadow-xs">
+                  <CameraOff className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-display font-bold text-slate-900 mb-2">
+                  Camera Access Required
+                </h3>
+                <p className="text-xs text-slate-600 font-sans mb-6 leading-relaxed">
+                  Camera permissions are blocked in your browser. Grant camera access to run live edge tracking, or explore full telemetry in simulation mode.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+                  <button
+                    onClick={startRealWebcamCV}
+                    className="w-full py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-sans font-semibold text-xs border border-slate-200 transition-all flex items-center justify-center gap-2"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Retry Camera</span>
+                  </button>
+                  <button
+                    onClick={onToggleDemo}
+                    className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 hover:from-orange-600 hover:to-rose-600 text-white font-sans font-semibold text-xs transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-white" />
+                    <span>Launch Simulation</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Initializing Spinner */}
+            {cameraState === 'INITIALIZING' && !demoMode && (
+              <div className="flex flex-col items-center z-30 text-xs font-sans text-slate-200 bg-black/60 px-6 py-5 rounded-2xl border border-white/10 backdrop-blur-md">
+                <RefreshCw className="w-8 h-8 text-rose-400 animate-spin mb-3" />
                 <span>Requesting optical stream & initializing pose model...</span>
               </div>
             )}
@@ -615,35 +661,35 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
             
             {/* Camera / Mode Pill */}
             {demoMode ? (
-              <div className="px-3.5 py-1.5 rounded-xl bg-amber-950/80 border border-amber-500/50 text-xs font-mono text-amber-300 flex items-center gap-2 shadow-lg">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span className="font-bold uppercase tracking-wider">DEMO DATA ACTIVE</span>
+              <div className="px-3.5 py-1.5 rounded-xl bg-amber-500/90 border border-amber-300 text-white text-xs font-sans font-bold flex items-center gap-2 shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                <span className="uppercase tracking-wider">SIMULATION FEED</span>
               </div>
             ) : cameraState === 'ACTIVE' ? (
-              <div className="px-3.5 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-xs font-mono text-emerald-300 flex items-center gap-2 shadow-lg">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span className="font-bold uppercase tracking-wider">LIVE CAMERA CV</span>
-                <span className="text-zinc-500">|</span>
-                <span className="text-emerald-400 font-bold">{realFps} FPS</span>
+              <div className="px-3.5 py-1.5 rounded-xl bg-emerald-600/90 border border-emerald-400 text-white text-xs font-sans font-bold flex items-center gap-2 shadow-lg backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+                <span className="uppercase tracking-wider">LIVE CAMERA CV</span>
+                <span className="opacity-60">|</span>
+                <span>{realFps} FPS</span>
               </div>
             ) : (
-              <div className="px-3.5 py-1.5 rounded-xl bg-zinc-900/90 border border-zinc-700 text-xs font-mono text-zinc-400 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-zinc-600" />
+              <div className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-slate-700 text-xs font-sans font-semibold text-slate-300 flex items-center gap-2 backdrop-blur-md">
+                <span className="w-2 h-2 rounded-full bg-slate-500" />
                 <span className="uppercase">CAMERA STANDBY</span>
               </div>
             )}
 
             {/* Model & Backend Status */}
-            <div className="px-3 py-1.5 rounded-xl bg-black/75 backdrop-blur-md border border-white/10 text-[10px] font-mono text-zinc-400 hidden sm:flex items-center gap-1.5">
+            <div className="px-3 py-1.5 rounded-xl bg-slate-900/75 backdrop-blur-md border border-white/10 text-[10px] font-sans font-semibold text-slate-300 hidden sm:flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>{backendConnected ? 'PostgreSQL Ingestion Live' : 'Local Edge Mode'}</span>
             </div>
 
             {cameraState === 'ACTIVE' && (
-              <div className={`px-2.5 py-1.5 rounded-xl text-[10px] font-mono border ${
+              <div className={`px-2.5 py-1.5 rounded-xl text-[10px] font-sans font-semibold border backdrop-blur-md ${
                 personDetected
-                  ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-300'
-                  : 'bg-amber-950/60 border-amber-500/30 text-amber-300'
+                  ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
+                  : 'bg-amber-950/70 border-amber-500/40 text-amber-300'
               }`}>
                 {personDetected ? 'User Locked' : 'No Person Detected'}
               </div>
@@ -652,24 +698,26 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
 
           {/* Switch CTA */}
           <div className="flex items-center gap-2 pointer-events-auto">
-            {cameraState === 'DENIED' ? (
+            {cameraState === 'DENIED' || cameraState === 'ERROR' ? (
               <button
                 onClick={startRealWebcamCV}
-                className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-mono text-zinc-200 border border-zinc-600 transition-all"
+                className="px-3.5 py-1.5 rounded-xl bg-white/90 hover:bg-white text-slate-800 text-xs font-sans font-semibold border border-white/40 transition-all shadow-md"
               >
                 Retry Camera
               </button>
             ) : (
               <button
                 onClick={onToggleDemo}
-                className="px-3.5 py-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-zinc-700 text-xs font-mono text-zinc-300 flex items-center gap-2 transition-all shadow-lg"
+                className="px-3.5 py-1.5 rounded-xl bg-white/90 hover:bg-white text-slate-800 text-xs font-sans font-semibold border border-white/40 flex items-center gap-2 transition-all shadow-md backdrop-blur-md"
               >
-                <RefreshCw className="w-3.5 h-3.5 text-zinc-400" />
-                <span>{demoMode ? 'Switch to Camera' : 'Switch to Demo Mode'}</span>
+                <RefreshCw className="w-3.5 h-3.5 text-slate-600" />
+                <span>{demoMode ? 'Switch to Camera' : 'Switch to Simulation'}</span>
               </button>
             )}
           </div>
         </div>
+            
+
 
         {/* BOTTOM HUD STATUS */}
         <div className="absolute bottom-5 left-5 right-5 z-30 flex items-center justify-between pointer-events-none">
@@ -704,28 +752,28 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
 
       </div>
 
-      {/* BILATERAL SYMMETRY & WEIGHT DISTRIBUTION BAR (POSTURE-SENSE INSPIRATION) */}
+      {/* BILATERAL SYMMETRY & WEIGHT DISTRIBUTION BAR */}
       {vizToggles.balance && (
-        <div className="p-4 rounded-2xl bg-[#090D12] border border-white/[0.08] cockpit-surface flex flex-col sm:flex-row items-center justify-between gap-4 font-mono text-xs">
+        <div className="p-4 rounded-2xl card-3d flex flex-col sm:flex-row items-center justify-between gap-4 font-sans text-xs">
           <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase font-bold text-zinc-400">Lateral Weight Balance</span>
-            <span className="text-xs font-bold text-emerald-400">
+            <span className="text-[10px] uppercase font-bold text-slate-500">Lateral Weight Balance</span>
+            <span className="text-xs font-bold text-rose-600">
               L {balanceRatio.left}% : R {balanceRatio.right}%
             </span>
           </div>
 
-          <div className="flex-1 max-w-md w-full h-3 bg-zinc-900 rounded-full border border-white/10 relative overflow-hidden flex items-center">
+          <div className="flex-1 max-w-md w-full h-3 bg-slate-100 rounded-full border border-slate-200 relative overflow-hidden flex items-center">
             {/* Center marker */}
-            <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-white/40 z-10 -translate-x-1/2" />
+            <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-slate-400 z-10 -translate-x-1/2" />
             <div
-              className="h-full bg-gradient-to-r from-cyan-500 to-emerald-400 transition-all duration-300"
+              className="h-full bg-gradient-to-r from-orange-500 via-rose-500 to-pink-500 transition-all duration-300"
               style={{ width: `${balanceRatio.left}%` }}
             />
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-[10px] uppercase text-zinc-500">Bilateral Symmetry:</span>
-            <span className="text-xs font-bold text-white px-2 py-0.5 rounded bg-zinc-800 border border-white/10">
+            <span className="text-[10px] uppercase font-bold text-slate-500">Bilateral Symmetry:</span>
+            <span className="text-xs font-bold text-slate-900 px-2.5 py-0.5 rounded-lg bg-slate-100 border border-slate-200">
               {symmetryScore}%
             </span>
           </div>
@@ -734,35 +782,35 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
 
       {/* SQUAT MOVEMENT FORM HUD (WHEN IN SQUAT MODE) */}
       {activeMode === 'squat' && (
-        <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-500/30 flex items-center justify-between font-mono text-xs">
+        <div className="p-4 rounded-2xl card-3d bg-rose-50/60 border-rose-200 flex items-center justify-between font-sans text-xs">
           <div className="flex items-center gap-3">
-            <span className="text-2xl font-bold text-purple-300">{squatReps}</span>
+            <span className="text-2xl font-bold font-display text-rose-600">{squatReps}</span>
             <div>
-              <span className="text-[10px] uppercase text-zinc-400 block font-bold">Repetition Counter</span>
-              <span className="text-sm font-bold text-white">Active Phase: {squatPhase}</span>
+              <span className="text-[10px] uppercase text-slate-500 block font-bold">Repetition Counter</span>
+              <span className="text-sm font-bold text-slate-900">Active Phase: {squatPhase}</span>
             </div>
           </div>
-          <span className="text-xs text-purple-300 px-3 py-1 rounded-xl bg-purple-900/60 border border-purple-500/40 font-bold">
+          <span className="text-xs text-rose-700 px-3 py-1 rounded-xl bg-rose-100 border border-rose-300 font-bold">
             Depth Target: &lt; 100° Knee Angle
           </span>
         </div>
       )}
 
-      {/* REAL-TIME CORRECTIVE ACTION CUE (POSTURE-SENSE / POSTUREGUARD FEEDBACK) */}
-      <div className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-mono text-xs ${
+      {/* REAL-TIME CORRECTIVE ACTION CUE */}
+      <div className={`p-4 rounded-2xl card-3d transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-sans text-xs ${
         currentTelemetry.postureState === 'Balanced'
-          ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
-          : 'bg-amber-950/50 border-amber-500/40 text-amber-300'
+          ? 'bg-emerald-50/50 border-emerald-200/80 text-emerald-900'
+          : 'bg-amber-50/50 border-amber-200/80 text-amber-900'
       }`}>
         <div className="flex items-center gap-3">
           <span className={`w-3 h-3 rounded-full shrink-0 ${
-            currentTelemetry.postureState === 'Balanced' ? 'bg-emerald-400' : 'bg-amber-400 animate-ping'
+            currentTelemetry.postureState === 'Balanced' ? 'bg-emerald-500' : 'bg-amber-500 animate-ping'
           }`} />
           <div>
-            <span className="font-bold uppercase tracking-wider block text-[11px] text-zinc-400">
+            <span className="font-bold uppercase tracking-wider block text-[10px] text-slate-500 mb-0.5">
               {currentTelemetry.postureState === 'Balanced' ? 'BIOMECHANICAL STATE // OPTIMAL' : 'POSTURE RULE ALERT // ACTION REQUIRED'}
             </span>
-            <span className="text-sm font-sans font-medium text-white">
+            <span className="text-xs sm:text-sm font-sans font-semibold text-slate-900">
               {currentTelemetry.postureState === 'Balanced'
                 ? 'Neutral alignment sustained. Cervical pitch, thoracic girdle, and lumbar vector are within target envelope.'
                 : currentTelemetry.postureState === 'Forward Head'
@@ -776,84 +824,84 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
 
         {/* Pipeline Telemetry Badges */}
         <div className="flex items-center gap-2 shrink-0">
-          <span className="px-2.5 py-1 rounded bg-black/50 border border-white/10 text-[10px] text-zinc-400">
+          <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-sans font-semibold text-slate-700">
             {realFps || 30} FPS
           </span>
-          <span className="px-2.5 py-1 rounded bg-black/50 border border-white/10 text-[10px] text-zinc-400">
+          <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-sans font-semibold text-slate-700">
             {personDetected ? '33/33 Keypoints' : '0/33 Keypoints'}
           </span>
-          <span className="px-2.5 py-1 rounded bg-emerald-950/60 border border-emerald-500/30 text-[10px] text-emerald-300 font-bold">
+          <span className="px-2.5 py-1 rounded-lg bg-rose-50 border border-rose-200 text-[10px] font-sans font-bold text-rose-600">
             98.4% Confidence
           </span>
         </div>
       </div>
 
       {/* LOWER TELEMETRY DECK */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-xs">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-sans text-xs">
         
         {/* Head */}
-        <div className="p-5 rounded-2xl bg-[#090D12] border border-white/[0.08] cockpit-surface">
-          <span className="text-zinc-500 uppercase tracking-widest block text-[10px] mb-1">Cervical Pitch (Head)</span>
+        <div className="p-5 rounded-2xl card-3d">
+          <span className="text-slate-500 uppercase tracking-wider block text-[10px] font-bold mb-1">Cervical Pitch (Head)</span>
           <div className="flex items-baseline justify-between">
-            <span className={`text-2xl font-bold ${currentTelemetry.headAngle > 22 ? 'text-amber-400' : 'text-emerald-400'}`}>
+            <span className={`text-2xl font-bold font-display ${currentTelemetry.headAngle > 22 ? 'text-amber-500' : 'text-slate-900'}`}>
               {currentTelemetry.headAngle}°
             </span>
-            <span className="text-[10px] text-zinc-500">Ref: 12°</span>
+            <span className="text-[10px] text-slate-400 font-medium">Ref: 12°</span>
           </div>
-          <div className="w-full h-1 bg-zinc-800 rounded-full mt-3 overflow-hidden">
+          <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden border border-slate-200/50">
             <div
-              className={`h-full ${currentTelemetry.headAngle > 22 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+              className={`h-full ${currentTelemetry.headAngle > 22 ? 'bg-amber-400' : 'bg-emerald-500'}`}
               style={{ width: `${Math.min(100, (currentTelemetry.headAngle / 35) * 100)}%` }}
             />
           </div>
         </div>
 
         {/* Shoulders */}
-        <div className="p-5 rounded-2xl bg-[#090D12] border border-white/[0.08] cockpit-surface">
-          <span className="text-zinc-500 uppercase tracking-widest block text-[10px] mb-1">Shoulder Balance (Tilt)</span>
+        <div className="p-5 rounded-2xl card-3d">
+          <span className="text-slate-500 uppercase tracking-wider block text-[10px] font-bold mb-1">Shoulder Balance (Tilt)</span>
           <div className="flex items-baseline justify-between">
-            <span className={`text-2xl font-bold ${currentTelemetry.shoulderAngle > 6 ? 'text-amber-400' : 'text-emerald-400'}`}>
+            <span className={`text-2xl font-bold font-display ${currentTelemetry.shoulderAngle > 6 ? 'text-amber-500' : 'text-slate-900'}`}>
               {currentTelemetry.shoulderAngle}°
             </span>
-            <span className="text-[10px] text-zinc-500">Ref: &lt; 3°</span>
+            <span className="text-[10px] text-slate-400 font-medium">Ref: &lt; 3°</span>
           </div>
-          <div className="w-full h-1 bg-zinc-800 rounded-full mt-3 overflow-hidden">
+          <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden border border-slate-200/50">
             <div
-              className={`h-full ${currentTelemetry.shoulderAngle > 6 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+              className={`h-full ${currentTelemetry.shoulderAngle > 6 ? 'bg-amber-400' : 'bg-emerald-500'}`}
               style={{ width: `${Math.min(100, (currentTelemetry.shoulderAngle / 15) * 100)}%` }}
             />
           </div>
         </div>
 
         {/* Torso */}
-        <div className="p-5 rounded-2xl bg-[#090D12] border border-white/[0.08] cockpit-surface">
-          <span className="text-zinc-500 uppercase tracking-widest block text-[10px] mb-1">Torso Inclination</span>
+        <div className="p-5 rounded-2xl card-3d">
+          <span className="text-slate-500 uppercase tracking-wider block text-[10px] font-bold mb-1">Torso Inclination</span>
           <div className="flex items-baseline justify-between">
-            <span className={`text-2xl font-bold ${currentTelemetry.torsoAngle > 14 ? 'text-amber-400' : 'text-emerald-400'}`}>
+            <span className={`text-2xl font-bold font-display ${currentTelemetry.torsoAngle > 14 ? 'text-amber-500' : 'text-slate-900'}`}>
               {currentTelemetry.torsoAngle}°
             </span>
-            <span className="text-[10px] text-zinc-500">Ref: 5°</span>
+            <span className="text-[10px] text-slate-400 font-medium">Ref: 5°</span>
           </div>
-          <div className="w-full h-1 bg-zinc-800 rounded-full mt-3 overflow-hidden">
+          <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden border border-slate-200/50">
             <div
-              className={`h-full ${currentTelemetry.torsoAngle > 14 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+              className={`h-full ${currentTelemetry.torsoAngle > 14 ? 'bg-amber-400' : 'bg-emerald-500'}`}
               style={{ width: `${Math.min(100, (currentTelemetry.torsoAngle / 25) * 100)}%` }}
             />
           </div>
         </div>
 
         {/* Current State & Stability */}
-        <div className="p-5 rounded-2xl bg-[#090D12] border border-white/[0.08] cockpit-surface">
-          <span className="text-zinc-500 uppercase tracking-widest block text-[10px] mb-1">Posture State</span>
+        <div className="p-5 rounded-2xl card-3d">
+          <span className="text-slate-500 uppercase tracking-wider block text-[10px] font-bold mb-1">Posture State</span>
           <div className="flex items-baseline justify-between">
-            <span className={`text-xl font-bold ${
-              currentTelemetry.postureState === 'Balanced' ? 'text-emerald-400' : 'text-amber-400'
+            <span className={`text-xl font-bold font-display ${
+              currentTelemetry.postureState === 'Balanced' ? 'text-rose-600' : 'text-amber-500'
             }`}>
               {currentTelemetry.postureState}
             </span>
-            <span className="text-emerald-400 font-bold">{currentTelemetry.stabilityScore}%</span>
+            <span className="text-rose-600 font-bold">{currentTelemetry.stabilityScore}%</span>
           </div>
-          <span className="text-[10px] text-zinc-500 block mt-2">
+          <span className="text-[10px] text-slate-500 block mt-2 font-medium">
             {currentTelemetry.postureState === 'Balanced' ? 'Optimal spinal balance' : 'Persistent deviation'}
           </span>
         </div>

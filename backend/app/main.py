@@ -26,7 +26,8 @@ app.add_middleware(
 
 # Mount Routers
 app.include_router(profile.router)
-app.include_router(sessions.router)
+app.include_router(sessions.router, prefix="/api/sessions")
+app.include_router(sessions.router, prefix="/api/session")
 app.include_router(analytics.router)
 app.include_router(posture.router)
 app.include_router(privacy.router)
