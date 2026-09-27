@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Camera as CameraIcon, CameraOff, AlertCircle, RefreshCw, ShieldCheck, Activity, Eye, AlertTriangle, CheckCircle2, Play, Sliders, Layers, Compass, Dumbbell, UserCheck, HeartPulse } from 'lucide-react';
+import { Camera as CameraIcon, CameraOff, AlertCircle, RefreshCw, ShieldCheck, Activity, Eye, AlertTriangle, CheckCircle2, Play, Sliders, Layers, Compass, Dumbbell, UserCheck, HeartPulse, Volume2, VolumeX } from 'lucide-react';
 import { analyzePoseLandmarks, analyzeSquatLandmarks } from '../utils/postureGeometry';
 
 export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = false, onToggleDemo }) {
@@ -50,6 +50,52 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
   const frameCountRef = useRef(0);
   const fpsWindowStartRef = useRef(performance.now());
   const simPhaseRef = useRef(0);
+
+  // Acoustic Feedback System (Web Audio API Synthesizer)
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const prevPersistentRef = useRef(false);
+
+  const playPostureChime = useCallback((type = 'alert') => {
+    if (!soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      if (type === 'alert') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(540, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.32);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.35);
+      } else if (type === 'recovery') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.28);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      }
+    } catch (e) {
+      // Audio autoplay policy fallback
+    }
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    if (currentTelemetry.isPersistentEpisode && !prevPersistentRef.current) {
+      playPostureChime('alert');
+    } else if (!currentTelemetry.isPersistentEpisode && prevPersistentRef.current) {
+      playPostureChime('recovery');
+    }
+    prevPersistentRef.current = currentTelemetry.isPersistentEpisode;
+  }, [currentTelemetry.isPersistentEpisode, playPostureChime]);
 
   // 1. Establish WebSocket Connection
   useEffect(() => {
@@ -553,6 +599,20 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
               {tog.label}
             </button>
           ))}
+
+          {/* Sound Alert Toggle */}
+          <button
+            onClick={() => setSoundEnabled(prev => !prev)}
+            className={`px-3 py-1.5 rounded-xl transition-all font-semibold flex items-center gap-1.5 ${
+              soundEnabled
+                ? 'bg-rose-50 text-rose-600 border border-rose-200/80 shadow-xs'
+                : 'text-slate-400 hover:text-slate-700'
+            }`}
+            title={soundEnabled ? 'Acoustic chimes active' : 'Acoustic chimes muted'}
+          >
+            {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span>{soundEnabled ? 'Chime ON' : 'Chime Muted'}</span>
+          </button>
         </div>
       </div>
 
