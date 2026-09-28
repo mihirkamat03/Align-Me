@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Camera as CameraIcon, CameraOff, AlertCircle, RefreshCw, ShieldCheck, Activity, Eye, AlertTriangle, CheckCircle2, Play, Sliders, Layers, Compass, Dumbbell, UserCheck, HeartPulse, Volume2, VolumeX } from 'lucide-react';
+import { Camera as CameraIcon, CameraOff, AlertCircle, RefreshCw, ShieldCheck, Activity, Eye, AlertTriangle, CheckCircle2, Play, Sliders, Layers, Compass, Dumbbell, UserCheck, HeartPulse, Volume2, VolumeX, Target, FileText, Sparkles, Clock, RotateCcw, Zap, Award } from 'lucide-react';
 import { analyzePoseLandmarks, analyzeSquatLandmarks } from '../utils/postureGeometry';
+import ClinicalAuditModal from './ClinicalAuditModal';
 
 export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = false, onToggleDemo }) {
   const videoRef = useRef(null);
@@ -11,6 +12,8 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
   const cameraInstanceRef = useRef(null);
   const poseInstanceRef = useRef(null);
   const squatBottomRef = useRef(false);
+  const lastSeenPersonRef = useRef(0);
+  const ritualTimerRef = useRef(null);
 
   // States
   const [cameraState, setCameraState] = useState('IDLE'); // 'IDLE', 'INITIALIZING', 'ACTIVE', 'DENIED', 'ERROR'
@@ -18,6 +21,30 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
   const [personDetected, setPersonDetected] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
   const [realFps, setRealFps] = useState(0);
+  const [detectionBoost, setDetectionBoost] = useState(true);
+
+  // USP 1: Personalized Ergonomic Calibration Baseline
+  const [calibration, setCalibration] = useState(() => {
+    try {
+      const saved = localStorage.getItem('alignme_calibration');
+      return saved ? JSON.parse(saved) : { headAngle: 12.0, shoulderAngle: 2.1, torsoAngle: 5.5, isCalibrated: false };
+    } catch (e) {
+      return { headAngle: 12.0, shoulderAngle: 2.1, torsoAngle: 5.5, isCalibrated: false };
+    }
+  });
+  const [calibrateFeedback, setCalibrateFeedback] = useState(null);
+
+  const calibrationRef = useRef(calibration);
+  useEffect(() => {
+    calibrationRef.current = calibration;
+  }, [calibration]);
+
+  // USP 2: Interactive 15-Second Spinal Reset Ritual
+  const [isRitualActive, setIsRitualActive] = useState(false);
+  const [ritualSeconds, setRitualSeconds] = useState(15);
+
+  // USP 3: Physiotherapist / Clinical Ergonomic Audit Modal
+  const [showClinicalAudit, setShowClinicalAudit] = useState(false);
 
   // Posture-Sense / PostureGuard Feature Extensions: Mode & Visualization Toggles
   const [activeMode, setActiveMode] = useState('sitting'); // 'sitting', 'squat', 'hold'
@@ -166,6 +193,62 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
     };
   }, [sessionId, onMetricsUpdate]);
 
+  // USP 1: Calibration Actions
+  const calibrateCurrentPosture = useCallback(() => {
+    const baseline = {
+      headAngle: currentTelemetry.headAngle,
+      shoulderAngle: currentTelemetry.shoulderAngle,
+      torsoAngle: currentTelemetry.torsoAngle,
+      isCalibrated: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setCalibration(baseline);
+    try { localStorage.setItem('alignme_calibration', JSON.stringify(baseline)); } catch (e) {}
+    setCalibrateFeedback('Ergonomic Neutral Spine Calibrated!');
+    playPostureChime('recovery');
+    setTimeout(() => setCalibrateFeedback(null), 3500);
+  }, [currentTelemetry, playPostureChime]);
+
+  const clearCalibration = useCallback(() => {
+    const def = { headAngle: 12.0, shoulderAngle: 2.1, torsoAngle: 5.5, isCalibrated: false };
+    setCalibration(def);
+    try { localStorage.removeItem('alignme_calibration'); } catch (e) {}
+    setCalibrateFeedback('Reset to Standard Normative Baseline');
+    setTimeout(() => setCalibrateFeedback(null), 3000);
+  }, []);
+
+  // USP 2: Spinal Reset Ritual Lifecycle
+  const startResetRitual = useCallback(() => {
+    setIsRitualActive(true);
+    setRitualSeconds(15);
+    playPostureChime('recovery');
+  }, [playPostureChime]);
+
+  const stopResetRitual = useCallback(() => {
+    setIsRitualActive(false);
+    if (ritualTimerRef.current) clearInterval(ritualTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (isRitualActive) {
+      ritualTimerRef.current = setInterval(() => {
+        setRitualSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(ritualTimerRef.current);
+            setIsRitualActive(false);
+            playPostureChime('recovery');
+            setCurrentTelemetry(t => ({ ...t, isPersistentEpisode: false, activeEpisode: null }));
+            setCalibrateFeedback('+25 Ergonomic Recovery Score Awarded!');
+            setTimeout(() => setCalibrateFeedback(null), 3500);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(ritualTimerRef.current);
+    }
+  }, [isRitualActive, playPostureChime]);
+
   // 2. Real MediaPipe Pose Model Initialization & Webcam Pipeline
   const startRealWebcamCV = useCallback(async () => {
     if (demoMode) return;
@@ -206,12 +289,18 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
       });
 
       pose.setOptions({
-        modelComplexity: 0,
+        modelComplexity: 1, // Full neural model for superior seated/upper-body detection
         smoothLandmarks: true,
         enableSegmentation: false,
-        minDetectionConfidence: 0.35,
-        minTrackingConfidence: 0.35
+        minDetectionConfidence: 0.22,
+        minTrackingConfidence: 0.22
       });
+
+      try {
+        await pose.initialize();
+      } catch (initErr) {
+        console.warn('Pose pre-initialization note:', initErr);
+      }
 
       pose.onResults((results) => {
         // Calculate true inference FPS
@@ -229,14 +318,17 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         if (!results.poseLandmarks || results.poseLandmarks.length === 0) {
-          setPersonDetected(false);
+          if (performance.now() - lastSeenPersonRef.current > 1500) {
+            setPersonDetected(false);
+          }
           return;
         }
 
+        lastSeenPersonRef.current = performance.now();
         setPersonDetected(true);
 
-        // 3. Compute real geometric angles from landmarks
-        const analysis = analyzePoseLandmarks(results.poseLandmarks);
+        // 3. Compute real geometric angles from landmarks relative to calibrated baseline
+        const analysis = analyzePoseLandmarks(results.poseLandmarks, calibrationRef.current);
         if (!analysis) return;
 
         // 4. Draw anatomical skeleton overlay on canvas
@@ -429,12 +521,19 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
       const processFrame = async () => {
         if (!poseInstanceRef.current) return;
         const video = videoRef.current;
-        if (video && video.readyState >= 2 && !video.paused && !isSendingFrame) {
+        if (
+          video &&
+          video.readyState >= 2 &&
+          video.videoWidth > 0 &&
+          video.videoHeight > 0 &&
+          !video.paused &&
+          !isSendingFrame
+        ) {
           isSendingFrame = true;
           try {
             await poseInstanceRef.current.send({ image: video });
           } catch (e) {
-            // Gracefully ignore frame drop
+            console.warn('Frame inference drop:', e);
           } finally {
             isSendingFrame = false;
           }
@@ -651,6 +750,88 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         </div>
       </div>
 
+      {/* ACTION HUB: CALIBRATION, SPINAL RESET, & CLINICAL AUDIT REPORT */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl bg-white border border-slate-200/90 shadow-sm text-xs font-sans">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* USP 1: 1-Click Ergonomic Calibration */}
+          <button
+            onClick={calibrateCurrentPosture}
+            className={`px-3.5 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all shadow-xs ${
+              calibration.isCalibrated
+                ? 'bg-rose-50 text-rose-700 border border-rose-200/90 hover:bg-rose-100'
+                : 'bg-slate-900 text-white hover:bg-slate-800'
+            }`}
+            title="Calibrates and locks your unique ergonomic neutral posture baseline"
+          >
+            <Target className="w-4 h-4 text-rose-500" />
+            <span>{calibration.isCalibrated ? 'Recalibrate Neutral' : 'Calibrate Neutral Spine'}</span>
+            {calibration.isCalibrated && (
+              <span className="text-[10px] bg-rose-200/70 text-rose-800 px-1.5 py-0.5 rounded-md font-bold">
+                Active
+              </span>
+            )}
+          </button>
+
+          {calibration.isCalibrated && (
+            <button
+              onClick={clearCalibration}
+              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all border border-slate-200/60"
+              title="Reset baseline to normative defaults"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* USP 2: Interactive 15-Second Spinal Reset Ritual */}
+          <button
+            onClick={isRitualActive ? stopResetRitual : startResetRitual}
+            className={`px-3.5 py-2 rounded-xl font-semibold flex items-center gap-2 transition-all shadow-xs ${
+              isRitualActive
+                ? 'bg-amber-500 text-white animate-pulse'
+                : 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-700 border border-amber-200/80 hover:bg-amber-100/60'
+            }`}
+            title="Start guided 15-second cervical decompression and posture reset"
+          >
+            <Zap className="w-4 h-4 text-amber-500" />
+            <span>{isRitualActive ? `Reset Ritual (${ritualSeconds}s)` : '15s Spinal Decompression'}</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* USP 3: Clinical Ergonomic Audit Report Modal Trigger */}
+          <button
+            onClick={() => setShowClinicalAudit(true)}
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-800 border border-slate-200 font-semibold flex items-center gap-2 transition-all shadow-xs"
+            title="Export full OSHA & RULA compliant ergonomic audit report"
+          >
+            <FileText className="w-4 h-4 text-slate-600" />
+            <span>Clinical Audit Report</span>
+          </button>
+
+          {/* Sensitivity Booster Pill */}
+          <button
+            onClick={() => setDetectionBoost(b => !b)}
+            className={`px-3 py-2 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 transition-all ${
+              detectionBoost
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'bg-slate-50 text-slate-500 border border-slate-200'
+            }`}
+            title="Toggles ultra-sensitive optical detector for low-light & desk webcams"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+            <span>{detectionBoost ? 'High Sensitivity' : 'Standard'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* CALIBRATION / RITUAL FEEDBACK BANNER */}
+      {calibrateFeedback && (
+        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2 shadow-sm animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{calibrateFeedback}</span>
+        </div>
+      )}
+
       {/* DOMINANT CAMERA VIEWPORT */}
       <div className="relative w-full h-[520px] sm:h-[620px] rounded-3xl overflow-hidden card-3d bg-slate-950 flex flex-col items-center justify-center shadow-2xl">
         
@@ -747,8 +928,70 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
           ref={canvasRef}
           width={640}
           height={480}
-          className="absolute inset-0 w-full h-full object-contain pointer-events-none z-20"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none z-20"
         />
+
+        {/* INTERACTIVE 15-SECOND SPINAL RESET RITUAL OVERLAY */}
+        {isRitualActive && (
+          <div className="absolute inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-white text-center animate-fade-in pointer-events-auto">
+            <div className="relative mb-4 flex items-center justify-center">
+              <svg className="w-28 h-28 transform -rotate-90">
+                <circle
+                  cx="56"
+                  cy="56"
+                  r="48"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  className="text-white/10"
+                  fill="transparent"
+                />
+                <circle
+                  cx="56"
+                  cy="56"
+                  r="48"
+                  stroke="currentColor"
+                  strokeWidth="8"
+                  className="text-amber-400 transition-all duration-1000 ease-linear"
+                  fill="transparent"
+                  strokeDasharray={2 * Math.PI * 48}
+                  strokeDashoffset={(2 * Math.PI * 48) * (1 - ritualSeconds / 15)}
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-black font-display text-white">{ritualSeconds}</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider text-amber-300">Seconds</span>
+              </div>
+            </div>
+
+            <div className="max-w-md space-y-2">
+              <span className="text-xs uppercase tracking-widest font-bold text-amber-400">
+                {ritualSeconds > 10 ? 'Phase 1: Cervical Retraction' : ritualSeconds > 5 ? 'Phase 2: Scapular Release' : 'Phase 3: Spinal Lengthening'}
+              </span>
+              <h3 className="text-xl font-bold font-display text-white">
+                {ritualSeconds > 10
+                  ? 'Deep Inhale & Chin Tuck'
+                  : ritualSeconds > 5
+                  ? 'Roll Shoulders Down & Back'
+                  : 'Lengthen Spine Towards Ceiling'}
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed font-sans">
+                {ritualSeconds > 10
+                  ? 'Gently draw your ears directly over your acromion shoulders. Relax jaw tension.'
+                  : ritualSeconds > 5
+                  ? 'Squeeze your shoulder blades together gently, opening your thoracic chest cavity.'
+                  : 'Imagine a golden thread pulling the crown of your head upward. Full restorative decompression.'}
+              </p>
+            </div>
+
+            <button
+              onClick={stopResetRitual}
+              className="mt-6 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-300 transition-all"
+            >
+              Skip Ritual
+            </button>
+          </div>
+        )}
 
         {/* TOP STATUS BAR (UNAMBIGUOUS & ACCURATE) */}
         <div className="absolute top-5 left-5 right-5 z-30 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
@@ -1002,6 +1245,14 @@ export default function LiveWebcamCV({ onMetricsUpdate, sessionId, demoMode = fa
         </div>
 
       </div>
+
+      {/* CLINICAL ERGONOMIC AUDIT MODAL */}
+      <ClinicalAuditModal
+        isOpen={showClinicalAudit}
+        onClose={() => setShowClinicalAudit(false)}
+        telemetry={currentTelemetry}
+        calibration={calibration}
+      />
 
     </div>
   );

@@ -44,7 +44,7 @@ export function calculateVerticalAngle(pFrom, pTo) {
  * - 11: Left Shoulder, 12: Right Shoulder
  * - 23: Left Hip, 24: Right Hip
  */
-export function analyzePoseLandmarks(landmarks) {
+export function analyzePoseLandmarks(landmarks, calibration = null) {
   if (!landmarks || landmarks.length < 13) {
     return null;
   }
@@ -95,24 +95,32 @@ export function analyzePoseLandmarks(landmarks) {
   const torsoInclination = calculateVerticalAngle(midHip, midShoulder);
   const cervicalPitch = calculateVerticalAngle(midShoulder, headRef);
 
-  // 3. Compute Composite Stability Index (0 - 100%)
-  // Ideal: head <= 12°, shoulder <= 2.5°, torso <= 6°
-  const headPen = Math.max(0, (cervicalPitch - 12.0) * 2.2);
-  const shPen = Math.max(0, (shoulderTilt - 2.5) * 3.5);
-  const torsoPen = Math.max(0, (torsoInclination - 6.0) * 2.0);
+  // 3. Compute Composite Stability Index (0 - 100%) relative to personalized baseline
+  const isCalibrated = Boolean(calibration?.isCalibrated);
+  const baseHead = isCalibrated ? calibration.headAngle : 12.0;
+  const baseSh = isCalibrated ? calibration.shoulderAngle : 2.5;
+  const baseTorso = isCalibrated ? calibration.torsoAngle : 6.0;
+
+  const headDelta = Math.abs(cervicalPitch - baseHead);
+  const shDelta = Math.abs(shoulderTilt - baseSh);
+  const torsoDelta = Math.abs(torsoInclination - baseTorso);
+
+  const headPen = Math.max(0, (headDelta - (isCalibrated ? 3.5 : 2.0)) * 2.2);
+  const shPen = Math.max(0, (shDelta - (isCalibrated ? 2.0 : 1.5)) * 3.5);
+  const torsoPen = Math.max(0, (torsoDelta - (isCalibrated ? 3.0 : 2.0)) * 2.0);
 
   const rawScore = 100.0 - (headPen + shPen + torsoPen);
   const stabilityIndex = Math.max(35, Math.min(100, Math.round(rawScore)));
 
   // 4. Instantaneous State Classification
   let instantState = 'Balanced';
-  if (cervicalPitch > 24.0 && torsoInclination > 16.0) {
+  if (headDelta > 13.0 && torsoDelta > 9.0) {
     instantState = 'Persistent Slouch';
-  } else if (cervicalPitch > 22.0) {
+  } else if (headDelta > 10.0) {
     instantState = 'Forward Head';
-  } else if (torsoInclination > 14.0) {
+  } else if (torsoDelta > 8.0) {
     instantState = 'Forward Lean';
-  } else if (shoulderTilt > 6.0) {
+  } else if (shDelta > 4.5) {
     instantState = 'Shoulder Asymmetry';
   }
 
